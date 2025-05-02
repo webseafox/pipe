@@ -1,0 +1,258 @@
+parameters:
+  - name: projectName
+    type: string
+    default: $(Build.Repository.Name)
+  - name: solutionPath
+    type: string
+    default: '*.sln'
+  - name: dockerfile
+    type: string
+    default: 'Dockerfile'
+  - name: helmValuesPath
+    type: string
+    default: 'helm'
+  - name: runSonar
+    type: boolean
+    default: true
+  - name: sonarProject
+    type: string
+    default: ''
+  - name: environments
+    type: object
+    default:
+      - name: 'DEV'
+        awsCredentials: 'AWS'
+        region: 'us-east-1'
+      - name: 'HML'
+        awsCredentials: 'AWS-HML'
+        region: 'us-east-1'
+      - name: 'PRD'
+        awsCredentials: 'AWS-PROD'
+        region: 'sa-east-1'
+
+variables:
+  - group: ValueDev
+  - group: ValueHML
+  - group: ValuePRD
+
+name: '$(Build.BuildNumber)'
+
+trigger:
+  branches:
+    include: ["develop","hotfix/*","release/*"]
+
+pool:
+  name: Azure Pipelines
+
+resources:
+  repositories:
+    - repository: templates
+      type: git
+      name: "Mirae Digital/newpipe"
+      ref: refs/heads/main
+
+stages:
+  - stage: GetVersion
+    displayName: 'Get Version'
+    jobs:
+      - job: GetVersion
+        displayName: 'Get Version from Project'
+        steps:
+          - task: PowerShell@2
+            inputs:
+              targetType: 'inline'
+              script: |
+                $xml = [Xml] (Get-Content .\src\${{ parameters.projectName }}\${{ parameters.projectName }}.csproj)
+                $version = $xml.Project.PropertyGroup.Version
+                echo $version
+                echo "##vso[build.updatebuildnumber]$version-rc.$(Build.BuildID)"
+
+  - stage: Build
+    displayName: 'Build and Test'
+    dependsOn: GetVersion
+    jobs:
+      - job: Build
+        displayName: 'Build and Test'
+        steps:
+          - checkout: self
+          - checkout: templates
+
+          - task: DotNetCoreCLI@2
+            displayName: 'Restore NuGet Packages'
+            inputs:
+              command: 'restore'
+              projects: '${{ parameters.solutionPath }}'
+
+          - task: DotNetCoreCLI@2
+            displayName: 'Build Solution'
+            inputs:
+              command: 'build'
+              projects: '${{ parameters.solutionPath }}'
+              arguments: '--configuration Release'
+
+          - task: DotNetCoreCLI@2
+            displayName: 'Run Tests'
+            inputs:
+              command: 'test'
+              projects: '${{ parameters.solutionPath }}'
+              arguments: '--configuration Release --collect:"XPlat Code Coverage"'
+
+          - task: PublishTestResults@2
+            displayName: 'Publish Test Results'
+            inputs:
+              testResultsFormat: 'VSTest'
+              testResultsFiles: '**/*.trx'
+              searchFolder: '$(System.DefaultWorkingDirectory)'
+
+          - task: PublishCodeCoverageResults@1
+            displayName: 'Publish Code Coverage'
+            inputs:
+              codeCoverageTool: 'Cobertura'
+              summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.cobertura.xml'
+
+          ${{ if eq(parameters.runSonar, true) }}:
+            - task: SonarQubePrepare@4
+              displayName: 'Prepare SonarQube Analysis'
+              inputs:
+                SonarQube: 'SonarQube'
+                scannerMode: 'MSBuild'
+                projectKey: '${{ parameters.sonarProject }}'
+                projectName: '${{ parameters.projectName }}'
+                projectVersion: '$(Build.BuildNumber)'
+
+            - task: SonarQubeAnalyze@4
+              displayName: 'Run SonarQube Analysis'
+
+            - task: SonarQubePublish@4
+              displayName: 'Publish SonarQube Results'
+
+          - task: Docker@2
+            displayName: 'Build Docker Image'
+            inputs:
+              command: 'build'
+              repository: '${{ parameters.projectName }}'
+              dockerfile: '${{ parameters.dockerfile }}'
+              tags: '$(Build.BuildNumber)'
+
+  - stage: DeployDev
+    displayName: 'Deploy to DEV'
+    dependsOn: Build
+    condition: succeeded()
+    jobs:
+      - job: DeployDev
+        displayName: 'Deploy to DEV'
+        variables:
+          - group: ValueDev
+        steps:
+          - task: Docker@2
+            displayName: 'Login to AWS ECR'
+            inputs:
+              command: 'login'
+              containerRegistry: |
+                {
+                  "type": "AWS",
+                  "awsCredentials": "${{ parameters.environments[0].awsCredentials }}",
+                  "awsRegion": "${{ parameters.environments[0].region }}"
+                }
+
+          - task: Docker@2
+            displayName: 'Push to ECR'
+            inputs:
+              command: 'push'
+              repository: '${{ parameters.projectName }}'
+              tags: '$(Build.BuildNumber)'
+
+          - task: HelmDeploy@0
+            displayName: 'Deploy to Kubernetes'
+            inputs:
+              connectionType: 'Kubernetes Service Connection'
+              kubernetesServiceConnection: 'K8S-DEV'
+              namespace: 'dev'
+              command: 'upgrade'
+              chartType: 'FilePath'
+              chartPath: '${{ parameters.helmValuesPath }}'
+              releaseName: '${{ parameters.projectName }}'
+              valueFile: 'values-dev.yaml'
+              arguments: '--set image.tag=$(Build.BuildNumber)'
+
+  - stage: DeployHml
+    displayName: 'Deploy to HML'
+    dependsOn: DeployDev
+    condition: succeeded()
+    jobs:
+      - job: DeployHml
+        displayName: 'Deploy to HML'
+        variables:
+          - group: ValueHML
+        steps:
+          - task: Docker@2
+            displayName: 'Login to AWS ECR'
+            inputs:
+              command: 'login'
+              containerRegistry: |
+                {
+                  "type": "AWS",
+                  "awsCredentials": "${{ parameters.environments[1].awsCredentials }}",
+                  "awsRegion": "${{ parameters.environments[1].region }}"
+                }
+
+          - task: Docker@2
+            displayName: 'Push to ECR'
+            inputs:
+              command: 'push'
+              repository: '${{ parameters.projectName }}'
+              tags: '$(Build.BuildNumber)'
+
+          - task: HelmDeploy@0
+            displayName: 'Deploy to Kubernetes'
+            inputs:
+              connectionType: 'Kubernetes Service Connection'
+              kubernetesServiceConnection: 'K8S-HML'
+              namespace: 'hml'
+              command: 'upgrade'
+              chartType: 'FilePath'
+              chartPath: '${{ parameters.helmValuesPath }}'
+              releaseName: '${{ parameters.projectName }}'
+              valueFile: 'values-hml.yaml'
+              arguments: '--set image.tag=$(Build.BuildNumber)'
+
+  - stage: DeployPrd
+    displayName: 'Deploy to PRD'
+    dependsOn: DeployHml
+    condition: succeeded()
+    jobs:
+      - job: DeployPrd
+        displayName: 'Deploy to PRD'
+        variables:
+          - group: ValuePRD
+        steps:
+          - task: Docker@2
+            displayName: 'Login to AWS ECR'
+            inputs:
+              command: 'login'
+              containerRegistry: |
+                {
+                  "type": "AWS",
+                  "awsCredentials": "${{ parameters.environments[2].awsCredentials }}",
+                  "awsRegion": "${{ parameters.environments[2].region }}"
+                }
+
+          - task: Docker@2
+            displayName: 'Push to ECR'
+            inputs:
+              command: 'push'
+              repository: '${{ parameters.projectName }}'
+              tags: '$(Build.BuildNumber)'
+
+          - task: HelmDeploy@0
+            displayName: 'Deploy to Kubernetes'
+            inputs:
+              connectionType: 'Kubernetes Service Connection'
+              kubernetesServiceConnection: 'K8S-PRD'
+              namespace: 'prd'
+              command: 'upgrade'
+              chartType: 'FilePath'
+              chartPath: '${{ parameters.helmValuesPath }}'
+              releaseName: '${{ parameters.projectName }}'
+              valueFile: 'values-prd.yaml'
+              arguments: '--set image.tag=$(Build.BuildNumber)' 

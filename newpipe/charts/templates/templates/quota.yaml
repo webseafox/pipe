@@ -1,0 +1,17 @@
+{{- if .Values.hpa.enabled }}
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: {{ .Chart.Name }}
+  labels:
+    app: {{ .Chart.Name }}
+    chart: {{ .Chart.Version }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+  annotations:
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  hard:
+    limits.cpu: {{ .Values.ResourceQuota.limits.cpu | quote }}
+    limits.memory: {{ .Values.ResourceQuota.limits.memory }}
+{{- end }}

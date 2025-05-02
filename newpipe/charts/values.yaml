@@ -1,0 +1,74 @@
+replicaCount: 1
+
+image:
+  repository: 
+  tag: 
+  pullPolicy: IfNotPresent
+
+resources:
+  limits:
+    cpu: 1
+    memory: 1Gi
+  requests:
+    cpu: 300m
+    memory: 512Mi
+
+ResourceQuota:
+  limits:
+    cpu: 6
+    memory: 6Gi
+
+hpa:
+  enabled: true
+  maxReplicas: 4
+  CpuPercentage: 100
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 5000
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 5000
+    
+ingress:
+  enabled: true
+  class: traefik
+  internal: false
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+  hosts:
+    internal:
+      host: internal.chart-example.local
+    external:
+      host: chart-example.local
+  middlewares:
+    - traefik-stripprefix@kubernetescrd
+  tls:
+    internal:
+      secretName: internal-chart-example-tls
+    external:
+      secretName: chart-example-tls
+
+rbac:
+  enabled: true
+
+service:
+  portName: http
+  type: ClusterIP
+  port: 5000
+
+# Configurações específicas do Traefik
+traefik:
+  enabled: true
+  middlewares:
+    stripPrefix:
+      enabled: true
+      prefixes:
+        - /api
+        - /dashboard
+      forceSlash: true 

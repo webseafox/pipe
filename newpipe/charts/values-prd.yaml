@@ -1,0 +1,57 @@
+replicaCount: 3
+
+image:
+  repository: ##ECR_REPOSITORY##/##PROJECT_NAME##
+  tag: ##BUILD_NUMBER##
+  pullPolicy: Always
+
+resources:
+  limits:
+    cpu: 2000m
+    memory: 2Gi
+  requests:
+    cpu: 1000m
+    memory: 1Gi
+
+ResourceQuota:
+  limits:
+    cpu: 6
+    memory: 6Gi
+
+hpa:
+  enabled: true
+  maxReplicas: 10
+  CpuPercentage: 80
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 5000
+  initialDelaySeconds: 30
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 5000
+  initialDelaySeconds: 5
+  periodSeconds: 5
+
+ingress:
+  enabled: true
+  istio: true
+  annotations: {}
+  hosts:
+    - host: ##PROJECT_NAME##.local
+      paths: []
+  url:
+    prefix: /
+  tls: []
+
+rbac:
+  enabled: true
+
+service:
+  portName: http
+  type: LoadBalancer
+  port: 5000 

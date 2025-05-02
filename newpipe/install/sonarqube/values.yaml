@@ -1,0 +1,56 @@
+# Configurações do SonarQube
+sonarqube:
+  # Configuração do serviço
+  service:
+    type: ClusterIP
+    port: 9000
+    targetPort: 9000
+
+  # Configuração do PostgreSQL
+  postgresql:
+    enabled: true
+    postgresqlUsername: sonar
+    postgresqlPassword: sonar
+    postgresqlDatabase: sonar
+    persistence:
+      enabled: true
+      size: 10Gi
+
+  # Configuração de recursos
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+
+  # Configuração de persistência
+  persistence:
+    enabled: true
+    size: 10Gi
+
+  # Configuração de ingress
+  ingress:
+    enabled: true
+    annotations:
+      kubernetes.io/ingress.class: traefik
+      traefik.ingress.kubernetes.io/router.entrypoints: websecure
+      traefik.ingress.kubernetes.io/router.tls: "true"
+      traefik.ingress.kubernetes.io/router.middlewares: traefik-stripprefix@kubernetescrd
+    hosts:
+      - host: sonarqube.your-domain.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: sonarqube-tls
+        hosts:
+          - sonarqube.your-domain.com
+
+  # Configurações adicionais
+  sonarProperties:
+    sonar.web.javaOpts: "-Xmx512m -Xms128m"
+    sonar.ce.javaOpts: "-Xmx512m -Xms128m"
+    sonar.search.javaOpts: "-Xmx512m -Xms128m"
+    sonar.web.context: "/" 

@@ -1,0 +1,84 @@
+replicaCount: 1
+
+image:
+  repository: ##ECR_REPOSITORY##/##PROJECT_NAME##
+  tag: ##BUILD_NUMBER##
+  pullPolicy: IfNotPresent
+
+resources:
+  limits:
+    cpu: 1
+    memory: 1Gi
+  requests:
+    cpu: 300m
+    memory: 512Mi
+
+ResourceQuota:
+  limits:
+    cpu: 6
+    memory: 6Gi
+
+hpa:
+  enabled: true
+  maxReplicas: 4
+  CpuPercentage: 100
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 5000
+  initialDelaySeconds: 30
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 5000
+  initialDelaySeconds: 5
+  periodSeconds: 5
+
+ingress:
+  enabled: true
+  class: traefik
+  internal: true
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+  hosts:
+    internal:
+      host: dev-internal.##PROJECT_NAME##.local
+    external:
+      host: dev.##PROJECT_NAME##.local
+  middlewares:
+    - traefik-stripprefix@kubernetescrd
+  tls:
+    internal:
+      secretName: dev-internal-##PROJECT_NAME##-tls
+    external:
+      secretName: dev-##PROJECT_NAME##-tls
+
+rbac:
+  enabled: true
+
+service:
+  portName: http
+  type: ClusterIP
+  port: 5000
+
+env:
+  - name: ASPNETCORE_ENVIRONMENT
+    value: "Development"
+  - name: ASPNETCORE_URLS
+    value: "http://+:80"
+
+# Configurações específicas do Traefik
+traefik:
+  enabled: true
+  middlewares:
+    stripPrefix:
+      enabled: true
+      prefixes:
+        - /api
+        - /dashboard
+      forceSlash: true 

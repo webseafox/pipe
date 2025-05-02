@@ -1,0 +1,67 @@
+{{- if .Values.ingress.enabled -}}
+{{- $fullName := include "newpipe.fullname" . -}}
+{{- $svcPort := .Values.service.port -}}
+{{- $ingressPath := .Values.ingress.path -}}
+{{- $ingressClass := .Values.ingress.class | default "traefik" -}}
+{{- $isInternal := .Values.ingress.internal | default false -}}
+
+{{- if $isInternal }}
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: {{ $fullName }}-internal
+  labels:
+    {{- include "newpipe.labels" . | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`{{ .Values.ingress.hosts.internal.host }}`)
+      kind: Rule
+      services:
+        - name: {{ $fullName }}
+          port: {{ $svcPort }}
+      {{- if .Values.ingress.middlewares }}
+      middlewares:
+        {{- range .Values.ingress.middlewares }}
+        - name: {{ . }}
+        {{- end }}
+      {{- end }}
+  tls:
+    secretName: {{ .Values.ingress.tls.internal.secretName }}
+{{- end }}
+
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: {{ $fullName }}-external
+  labels:
+    {{- include "newpipe.labels" . | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`{{ .Values.ingress.hosts.external.host }}`)
+      kind: Rule
+      services:
+        - name: {{ $fullName }}
+          port: {{ $svcPort }}
+      {{- if .Values.ingress.middlewares }}
+      middlewares:
+        {{- range .Values.ingress.middlewares }}
+        - name: {{ . }}
+        {{- end }}
+      {{- end }}
+  tls:
+    secretName: {{ .Values.ingress.tls.external.secretName }}
+{{- end }} 

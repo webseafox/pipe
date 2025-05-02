@@ -1,0 +1,83 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.7.34221.43
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{F4C0D005-80E7-487B-AE5B-28EEB14062A2}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MiraeDigital.BffMobile.API", "src\MiraeDigital.BffMobile.API\MiraeDigital.BffMobile.API.csproj", "{1702B9AB-EB19-482B-BD0E-5A802E47F32B}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MiraeDigital.BffMobile.Application", "src\MiraeDigital.BffMobile.Application\MiraeDigital.BffMobile.Application.csproj", "{F45DD142-1724-4413-8238-DAE6D0D2D9AA}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MiraeDigital.BffMobile.Domain", "src\MiraeDigital.BffMobile.Domain\MiraeDigital.BffMobile.Domain.csproj", "{031192E3-8DFF-456B-8503-693308522787}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{EEF0C141-9485-44F3-B9C5-84A152B6681C}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MiraeDigital.BffMobile.UnitTests", "tests\MiraeDigital.BffMobile.UnitTests\MiraeDigital.BffMobile.UnitTests.csproj", "{80572726-5D02-4C2B-B582-7064DDDF9D71}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MiraeDigital.BffMobile.IntegrationTests", "tests\MiraeDigital.BffMobile.IntegrationTests\MiraeDigital.BffMobile.IntegrationTests.csproj", "{28CD0C16-2441-4748-8311-3C461DB90718}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "helm", "helm", "{3CA4D964-38E1-482C-93C9-95D4EBE35D7E}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Development", "Development", "{9DF41F30-A74C-4C6D-818F-D819B8A3AEFD}"
+	ProjectSection(SolutionItems) = preProject
+		helm\Development\appsettings.json = helm\Development\appsettings.json
+		helm\Development\values.yaml = helm\Development\values.yaml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Production", "Production", "{55A6604A-0B19-4313-B1F2-35F76540785B}"
+	ProjectSection(SolutionItems) = preProject
+		helm\Production\appsettings.json = helm\Production\appsettings.json
+		helm\Production\values.yaml = helm\Production\values.yaml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Homolog", "Homolog", "{1F8BE8DA-D788-463D-8D6F-D68FBB55C681}"
+	ProjectSection(SolutionItems) = preProject
+		helm\Homolog\appsettings.json = helm\Homolog\appsettings.json
+		helm\Homolog\values.yaml = helm\Homolog\values.yaml
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1702B9AB-EB19-482B-BD0E-5A802E47F32B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1702B9AB-EB19-482B-BD0E-5A802E47F32B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1702B9AB-EB19-482B-BD0E-5A802E47F32B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1702B9AB-EB19-482B-BD0E-5A802E47F32B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F45DD142-1724-4413-8238-DAE6D0D2D9AA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F45DD142-1724-4413-8238-DAE6D0D2D9AA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F45DD142-1724-4413-8238-DAE6D0D2D9AA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F45DD142-1724-4413-8238-DAE6D0D2D9AA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{031192E3-8DFF-456B-8503-693308522787}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{031192E3-8DFF-456B-8503-693308522787}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{031192E3-8DFF-456B-8503-693308522787}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{031192E3-8DFF-456B-8503-693308522787}.Release|Any CPU.Build.0 = Release|Any CPU
+		{80572726-5D02-4C2B-B582-7064DDDF9D71}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{80572726-5D02-4C2B-B582-7064DDDF9D71}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{80572726-5D02-4C2B-B582-7064DDDF9D71}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{80572726-5D02-4C2B-B582-7064DDDF9D71}.Release|Any CPU.Build.0 = Release|Any CPU
+		{28CD0C16-2441-4748-8311-3C461DB90718}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{28CD0C16-2441-4748-8311-3C461DB90718}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{28CD0C16-2441-4748-8311-3C461DB90718}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{28CD0C16-2441-4748-8311-3C461DB90718}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{1702B9AB-EB19-482B-BD0E-5A802E47F32B} = {F4C0D005-80E7-487B-AE5B-28EEB14062A2}
+		{F45DD142-1724-4413-8238-DAE6D0D2D9AA} = {F4C0D005-80E7-487B-AE5B-28EEB14062A2}
+		{031192E3-8DFF-456B-8503-693308522787} = {F4C0D005-80E7-487B-AE5B-28EEB14062A2}
+		{80572726-5D02-4C2B-B582-7064DDDF9D71} = {EEF0C141-9485-44F3-B9C5-84A152B6681C}
+		{28CD0C16-2441-4748-8311-3C461DB90718} = {EEF0C141-9485-44F3-B9C5-84A152B6681C}
+		{9DF41F30-A74C-4C6D-818F-D819B8A3AEFD} = {3CA4D964-38E1-482C-93C9-95D4EBE35D7E}
+		{55A6604A-0B19-4313-B1F2-35F76540785B} = {3CA4D964-38E1-482C-93C9-95D4EBE35D7E}
+		{1F8BE8DA-D788-463D-8D6F-D68FBB55C681} = {3CA4D964-38E1-482C-93C9-95D4EBE35D7E}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {A3B816CA-77F7-41EB-AB2D-FABCB1C524A1}
+	EndGlobalSection
+EndGlobal

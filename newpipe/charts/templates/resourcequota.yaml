@@ -1,0 +1,16 @@
+{{- if .Values.ResourceQuota }}
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: {{ .Release.Name }}-quota
+  labels:
+    app: {{ .Release.Name }}
+spec:
+  hard:
+    {{- if .Values.ResourceQuota.limits.cpu }}
+    limits.cpu: {{ .Values.ResourceQuota.limits.cpu }}
+    {{- end }}
+    {{- if .Values.ResourceQuota.limits.memory }}
+    limits.memory: {{ .Values.ResourceQuota.limits.memory }}
+    {{- end }}
+{{- end }} 

@@ -1,0 +1,38 @@
+# Configuração do Fallback Router para Traefik
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: fallback-route
+  namespace: traefik
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: HostRegexp(`{domain:.+}`)
+      priority: 0
+      services:
+        - name: fallback-service
+          port: 80
+---
+# Configuração do Serviço de Fallback
+apiVersion: v1
+kind: Service
+metadata:
+  name: fallback-service
+  namespace: traefik
+spec:
+  type: ExternalName
+  externalName: outro-proxy.your-domain.com
+---
+# Configuração do Middleware de Strip Prefix
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: strip-prefix
+  namespace: traefik
+spec:
+  stripPrefix:
+    prefixes:
+      - /api
+      - /dashboard
+    forceSlash: true 

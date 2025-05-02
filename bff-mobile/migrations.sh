@@ -1,0 +1,1 @@
+dotnet ef migrations add Initial -p src/MiraeDigital.BffMobile.Infrastructure/ -o Migrations

@@ -1,0 +1,34 @@
+version: '3.4'
+
+services:
+  bff-mobile:
+    image: ${DOCKER_REGISTRY-}bff-mobile:latest
+    build:
+      context: .
+      args:
+        PAT: ${PAT}
+    ports:
+      - 8083:80
+      - 8084:443
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Docker
+      - POSTGRES_CONNECTION_STRING=Host=db;Port=5432;Database=dev-bff-mobile-service;Username=postgres;Password=Dev123
+      - JWT_SECURITY_KEY=ejdbuUgKuzDCSLcolNNaDRHldWtp1p8S
+    networks:
+      - mirae
+    depends_on:
+      - db
+
+  db:
+    image: postgres
+    restart: always
+    environment:
+      - POSTGRES_PASSWORD=Dev123
+    ports:
+      - 5432:5432
+    networks:
+      - mirae
+      
+networks:
+  mirae:
+    driver: bridge

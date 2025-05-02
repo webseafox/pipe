@@ -1,0 +1,19 @@
+extends:
+  template: build/base-pipeline.yaml
+  parameters:
+    projectName: 'NovoProjeto.API'
+    solutionPath: 'NovoProjeto.sln'
+    dockerfile: 'Dockerfile'
+    helmValuesPath: 'helm'
+    runSonar: true
+    sonarProject: 'novo-projeto'
+    environments:
+      - name: 'DEV'
+        awsCredentials: 'AWS'
+        region: 'us-east-1'
+      - name: 'HML'
+        awsCredentials: 'AWS-HML'
+        region: 'us-east-1'
+      - name: 'PRD'
+        awsCredentials: 'AWS-PROD'
+        region: 'sa-east-1'
