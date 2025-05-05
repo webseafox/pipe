@@ -1,0 +1,145 @@
+parameters:
+  dockerfile: 'Dockerfile'
+  image: $(Build.Repository.Name)
+  jobName: 'Build'
+  helmValuesPath: 'helm'
+  runSonar: false
+  sonarProject: ''
+  solution: ''
+  scriptBuild: 'devops-templates/scripts/build-docker.sh'
+  scriptPush: 'devops-templates/scripts/push-docker.sh'
+  scriptSonar: 'devops-templates/scripts/sonar-dotnet-coverage.sh'
+  scriptSonarName: 'sonar-dotnet-coverage.sh'
+
+stages:
+- stage: ${{ parameters.jobName }}
+  jobs:
+    - job: Coverage
+      pool:
+        vmimage: 'ubuntu-latest'
+      displayName: SonarQube Code Coverage
+      continueOnError: 'false'
+      workspace:
+        clean: all
+      condition: and(succeeded(), eq(${{ parameters.runSonar }}, true))
+      steps:
+      - checkout: self
+      - checkout: templates
+      - script: cd $(Build.SourcesDirectory)/$(Build.Repository.Name) && docker-compose up -d db
+        displayName: 'Docker Compose Up'
+      - script: cd $(Build.Repository.Name) && chmod +x '$(Build.SourcesDirectory)/${{ parameters.scriptSonar }}' && cp $(Build.SourcesDirectory)/${{ parameters.scriptSonar }} . && sh ${{ parameters.scriptSonarName }} $(System.AccessToken) ${{ parameters.sonarProject }} ${{ parameters.solution }}
+        displayName: 'Run SonarQube'
+      - script: cd $(Build.SourcesDirectory)/$(Build.Repository.Name) && docker-compose down
+        displayName: 'Docker Compose Down'
+        
+
+    - job: Build
+      displayName: Build and Push a Docker Image
+      variables:
+        additionalTag: $[coalesce(variables['addTag'], '$(Build.BuildNumber)')]
+      continueOnError: 'false'
+      workspace:
+        clean: all
+      steps:
+      - checkout: self
+      - checkout: templates
+        displayName: 'Checkout templates'
+
+      - script: cd $(Build.Repository.Name) && chmod +x '$(Build.SourcesDirectory)/${{ parameters.scriptBuild }}'  && sh '$(Build.SourcesDirectory)/${{ parameters.scriptBuild }}' ${{ parameters.dockerfile }} ${{ parameters.image }} $(Build.BuildNumber) $(System.AccessToken)
+        displayName: 'Build Docker Image'      
+
+
+      - task: replacetokens@3
+        displayName: replace token ValuePRD
+        inputs:
+          rootDirectory: '$(Build.Repository.Name)/helm/Production/'
+          targetFiles: '**/*.yaml'
+          encoding: 'auto'
+          writeBOM: true
+          escapeType: 'none'
+          actionOnMissing: 'warn'
+          keepToken: false
+          actionOnNoFiles: 'continue'
+          enableTransforms: false
+          tokenPrefix: '#{'
+          tokenSuffix: '}#'
+          enableRecursion: false
+          useLegacyPattern: false
+          enableTelemetry: true
+
+      - task: AmazonWebServices.aws-vsts-tools.AWSShellScript.AWSShellScript@1
+        displayName: 'PRD'
+        inputs:
+          awsCredentials: 'AWS-PROD'
+          regionName: 'sa-east-1'
+          arguments: '${{ parameters.image }} $(Build.BuildNumber) sa-east-1'
+          filePath: '${{ parameters.scriptPush }}'
+          disableAutoCwd: true
+          workingDirectory: '$(System.DefaultWorkingDirectory)/'
+
+      - task: replacetokens@3
+        displayName: replace token ValueHML
+        inputs:
+          rootDirectory: '$(Build.Repository.Name)/helm/Homolog/'
+          targetFiles: '**/*.yaml'
+          encoding: 'auto'
+          writeBOM: true
+          escapeType: 'none'
+          actionOnMissing: 'warn'
+          keepToken: false
+          actionOnNoFiles: 'continue'
+          enableTransforms: false
+          tokenPrefix: '#{'
+          tokenSuffix: '}#'
+          enableRecursion: false
+          useLegacyPattern: false
+          enableTelemetry: true
+          
+      - task: AmazonWebServices.aws-vsts-tools.AWSShellScript.AWSShellScript@1
+        displayName: 'HML'
+        inputs:
+          awsCredentials: 'AWS'
+          regionName: 'us-east-1'
+          arguments: '${{ parameters.image }} $(Build.BuildNumber) us-east-1' 
+          filePath: '${{ parameters.scriptPush }}'
+          disableAutoCwd: true
+          workingDirectory: '$(System.DefaultWorkingDirectory)/'
+
+      - task: replacetokens@3
+        displayName: replace token ValueDEV
+        inputs:
+          rootDirectory: '$(Build.Repository.Name)/helm/Development/'
+          targetFiles: '**/*.yaml'
+          encoding: 'auto'
+          writeBOM: true
+          escapeType: 'none'
+          actionOnMissing: 'warn'
+          keepToken: false
+          actionOnNoFiles: 'continue'
+          enableTransforms: false
+          tokenPrefix: '#{'
+          tokenSuffix: '}#'
+          enableRecursion: false
+          useLegacyPattern: false
+          enableTelemetry: true
+          
+      - task: AmazonWebServices.aws-vsts-tools.AWSShellScript.AWSShellScript@1
+        displayName: 'DEV'
+        inputs:
+          awsCredentials: 'AWS'
+          regionName: 'us-east-1'
+          arguments: '${{ parameters.image }} $(Build.BuildNumber) us-east-1' 
+          filePath: '${{ parameters.scriptPush }}'
+          disableAutoCwd: true
+          workingDirectory: '$(System.DefaultWorkingDirectory)/'
+
+      - script: cp -R $(Build.SourcesDirectory)/$(Build.Repository.Name)/${{ parameters.helmValuesPath }}/* $(Build.SourcesDirectory)/devops-templates/charts/
+        displayName: 'Copy Helm Values'
+
+      - script: cp $(Build.SourcesDirectory)/devops-templates/scripts/deploy-helm.sh $(Build.SourcesDirectory)/devops-templates/charts/
+        displayName: 'Copy Deploy Helm Script'
+      
+      - task: PublishPipelineArtifact@1
+        inputs:
+          targetPath: $(Build.SourcesDirectory)/devops-templates/charts
+          artifactName: helm
