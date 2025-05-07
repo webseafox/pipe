@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: traefik-internal
+  namespace: traefik
+  annotations:
+    alb.ingress.kubernetes.io/backend-protocol: HTTP
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+    alb.ingress.kubernetes.io/load-balancer-name: traefik-internal
+    alb.ingress.kubernetes.io/scheme: internal
+    alb.ingress.kubernetes.io/success-codes: "200-399"
+    alb.ingress.kubernetes.io/target-type: instance
+    alb.ingress.kubernetes.io/subnets: "subnet-0ec5050687968d871,subnet-01d980e76a46cb206"
+spec:
+  type: NodePort
+  ports:
+    - name: web
+      nodePort: 30081
+      port: 80
+      targetPort: web
+      protocol: TCP
+    - name: websecure
+      nodePort: 30444
+      port: 443
+      targetPort: websecure
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: traefik 

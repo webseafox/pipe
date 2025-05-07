@@ -1,0 +1,42 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: traefik-dashboard
+  namespace: traefik
+  annotations:
+    alb.ingress.kubernetes.io/backend-protocol: HTTP
+    alb.ingress.kubernetes.io/certificate-arn: "arn:aws:acm:us-east-1:369977587964:certificate/dedac4c6-1167-4e45-b768-99519d3dde78"
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS":443}]'
+    alb.ingress.kubernetes.io/load-balancer-name: traefik-dashboard
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/success-codes: "200-404"
+    alb.ingress.kubernetes.io/target-type: instance
+    alb.ingress.kubernetes.io/subnets: "subnet-0ec5050687968d871,subnet-01d980e76a46cb206"
+    alb.ingress.kubernetes.io/healthcheck-path: /ping
+spec:
+  ingressClassName: alb
+  rules:
+    - http:
+        paths:
+          - path: /ping
+            pathType: Prefix
+            backend:
+              service:
+                name: traefik
+                port:
+                  name: web
+          - path: /dashboard
+            pathType: Prefix
+            backend:
+              service:
+                name: traefik
+                port:
+                  name: web
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: traefik
+                port:
+                  name: web 

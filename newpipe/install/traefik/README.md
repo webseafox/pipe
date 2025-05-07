@@ -1,139 +1,150 @@
-# Instalação do Traefik Ingress Controller no EKS
+# Traefik no EKS
 
-Este documento contém instruções para instalar o Traefik Ingress Controller no Amazon EKS com suporte a Load Balancers internos e externos.
+Este diretório contém os manifestos Kubernetes para instalar e configurar o Traefik como ingress controller no EKS, utilizando AWS Load Balancer Controller.
+
+## Estrutura de Arquivos
+
+- `00-ingress-class.yaml`: Define o IngressClass para o AWS Load Balancer Controller
+- `01-namespace.yaml`: Cria o namespace dedicado para o Traefik
+- `01-rbac.yaml`: Configura as permissões do Traefik
+- `02-deployment.yaml`: Configura o deployment do Traefik
+- `03-service-external.yaml`: Configura o serviço externo com ALB
+- `04-service-internal.yaml`: Configura o serviço interno como ClusterIP
+- `05-dashboard-ingress.yaml`: Configura o acesso interno à dashboard do Traefik
 
 ## Pré-requisitos
 
-- Cluster EKS configurado
-- AWS Load Balancer Controller instalado
-- Helm 3 instalado
-- Certificado SSL válido no AWS Certificate Manager (para o Load Balancer externo)
-- IAM permissions configuradas para o AWS Load Balancer Controller
-
-## Adicionar o repositório Helm
-
-```bash
-helm repo add traefik https://traefik.github.io/charts
-helm repo update
-```
+1. Cluster EKS configurado
+2. AWS Load Balancer Controller instalado
+3. Certificado SSL válido no ACM
+4. Subnets configuradas com as tags corretas do Kubernetes
 
 ## Instalação
 
-1. Crie o namespace para o Traefik:
+Aplique os manifestos na seguinte ordem:
 
 ```bash
-kubectl create namespace traefik
+# Criar o IngressClass
+kubectl apply -f 00-ingress-class.yaml
+
+# Criar o namespace
+kubectl apply -f 01-namespace.yaml
+
+# Configurar RBAC
+kubectl apply -f 01-rbac.yaml
+
+# Deployar o Traefik
+kubectl apply -f 02-deployment.yaml
+
+# Criar os serviços
+kubectl apply -f 03-service-external.yaml
+kubectl apply -f 04-service-internal.yaml
+
+# Configurar o acesso à dashboard
+kubectl apply -f 05-dashboard-ingress.yaml
 ```
 
-2. Instale o Traefik usando o arquivo values.yaml:
+## Verificação da Instalação
 
 ```bash
-helm install traefik traefik/traefik -n traefik -f values.yaml
+# Verificar o status dos pods
+kubectl get pods -n traefik
+
+# Verificar os serviços
+kubectl get svc -n traefik
+
+# Verificar os ingress
+kubectl get ingress -n traefik
+
+# Verificar os logs
+kubectl logs -n traefik -l app.kubernetes.io/name=traefik
 ```
 
-## Configuração de Fallback
+## Acesso aos Serviços
 
-Para configurar o roteamento de fallback para outro proxy:
-
-1. Ajuste o arquivo `fallback-config.yaml`:
-   - Substitua `outro-proxy.your-domain.com` pelo endereço do seu proxy de fallback
-   - Ajuste os prefixos no middleware conforme necessário
-
-2. Aplique a configuração de fallback:
-
+### Dashboard do Traefik (Acesso Interno)
+O dashboard é acessível apenas dentro do cluster através do Traefik Ingress:
 ```bash
-kubectl apply -f fallback-config.yaml
+# Obter o endereço do Traefik Ingress
+kubectl get ingress -n traefik traefik-dashboard -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
 ```
+Acesse: `http://<TRAEFIK-INGRESS-IP>/dashboard/`
 
-## Configurações
-
-O arquivo `values.yaml` contém as seguintes configurações principais:
-
-- Dois replicas do Traefik
-- Load Balancer externo (internet-facing) com SSL
-- Load Balancer interno para tráfego VPC
-- Configuração de recursos: 100m CPU e 128Mi memória (requests)
-- Logs em formato JSON
-- TLS habilitado
-- Middlewares padrão configurados
-
-O arquivo `fallback-config.yaml` contém:
-
-- Roteador de fallback para tráfego não correspondente
-- Serviço de fallback apontando para outro proxy
-- Middleware de strip prefix para manipulação de rotas
-
-## Ajustes Necessários
-
-Antes de instalar, você precisa:
-
-1. Substituir o ARN do certificado SSL no `values.yaml`:
-   ```yaml
-   service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "arn:aws:acm:region:account:certificate/cert-id"
-   ```
-
-2. Verificar se o AWS Load Balancer Controller tem as permissões necessárias:
-   - Criar Load Balancers
-   - Gerenciar certificados ACM
-   - Acessar recursos de rede
-
-## Verificação
-
-Após a instalação, verifique:
-
-1. Os Load Balancers criados:
-   ```bash
-   aws elbv2 describe-load-balancers
-   ```
-
-2. Os pods do Traefik:
-   ```bash
-   kubectl get pods -n traefik
-   ```
-
-3. Os serviços:
-   ```bash
-   kubectl get svc -n traefik
-   ```
-
-4. As rotas de fallback:
-   ```bash
-   kubectl get ingressroute -n traefik
-   ```
-
-## Atualização
-
-Para atualizar a instalação:
-
+### Serviço Externo
 ```bash
-helm upgrade traefik traefik/traefik -n traefik -f values.yaml
+# Obter o DNS do ALB externo
+kubectl get svc -n traefik traefik -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
 ```
+Acesse: `https://<DNS-DO-ALB-EXTERNO>/`
 
-Para atualizar a configuração de fallback:
-
+### Serviço Interno
+O serviço interno é acessível apenas dentro do cluster através do ClusterIP:
 ```bash
-kubectl apply -f fallback-config.yaml
+# Obter o ClusterIP
+kubectl get svc -n traefik traefik-internal -o jsonpath='{.spec.clusterIP}'
 ```
+Acesse: `http://<CLUSTER-IP>:8080/`
 
-## Desinstalação
+## Configuração
 
-Para remover o Traefik:
+### Portas
+- Externo:
+  - HTTP: 80
+  - HTTPS: 443
+- Interno (ClusterIP):
+  - HTTP: 8080
+  - HTTPS: 8443
 
+### Recursos
+- CPU Request: 100m
+- CPU Limit: 500m
+- Memory Request: 128Mi
+- Memory Limit: 512Mi
+
+### Replicas
+- 2 réplicas para alta disponibilidade
+
+## Troubleshooting
+
+### Verificar Logs
 ```bash
-helm uninstall traefik -n traefik
-kubectl delete namespace traefik
+# Logs do Traefik
+kubectl logs -n traefik -l app.kubernetes.io/name=traefik
+
+# Descrever pods
+kubectl describe pods -n traefik -l app.kubernetes.io/name=traefik
 ```
 
-Para remover a configuração de fallback:
+### Problemas Comuns
+1. **ALB não é criado**
+   - Verificar se o AWS Load Balancer Controller está instalado
+   - Verificar se as subnets têm as tags corretas
 
+2. **Dashboard não acessível**
+   - Verificar se o Traefik está configurado como Ingress Controller
+   - Verificar se o serviço interno está respondendo na porta 8080
+   - Verificar se o path `/dashboard` está configurado corretamente
+
+3. **Serviços internos não acessíveis**
+   - Verificar se o ClusterIP está configurado corretamente
+   - Verificar se os pods estão rodando
+   - Verificar se as portas estão corretas
+
+4. **Erros de permissão**
+   - Verificar se o RBAC está configurado corretamente
+   - Verificar se o ServiceAccount está sendo usado
+   - Verificar se o ClusterRoleBinding está correto
+
+## Manutenção
+
+### Atualização
+Para atualizar o Traefik, basta aplicar novamente os manifestos:
 ```bash
-kubectl delete -f fallback-config.yaml
+kubectl apply -f .
 ```
 
-## Notas Importantes
-
-- O Load Balancer externo é acessível via internet
-- O Load Balancer interno só é acessível dentro da VPC
-- O roteador de fallback captura todo tráfego não correspondente
-- Certifique-se de configurar corretamente os Security Groups
-- Monitore os logs para identificar possíveis problemas 
+### Remoção
+Para remover todos os recursos:
+```bash
+kubectl delete -f .
+``` 
